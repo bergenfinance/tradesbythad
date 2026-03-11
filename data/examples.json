@@ -1,1 +1,29 @@
-[]
+[
+  {
+    "id": "sndk-2026-01-02",
+    "symbol": "SNDK",
+    "title": "SNDK Trade Study",
+    "groupId": "energy-breakouts",
+    "startDate": "2026-01-02",
+    "endDate": "2026-03-10",
+    "year": 2026,
+    "tags": [],
+    "notes": "",
+    "images": [],
+    "tradingViewSymbol": "",
+    "tradingViewInterval": "D",
+    "createdAt": "2026-03-11T02:48:34.709Z",
+    "entryPrice": null,
+    "exitPrice": null,
+    "stopLoss": null,
+    "direction": "long",
+    "setupType": null,
+    "epsGrowth": null,
+    "salesGrowth": null,
+    "rsRating": null,
+    "compositeRating": null,
+    "adRating": null,
+    "marketCondition": null,
+    "baseNumber": null
+  }
+]
