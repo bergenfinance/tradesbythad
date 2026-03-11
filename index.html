@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Chart Studies</title>
+  <meta name="description" content="Visual knowledge base for documenting and organizing historical stock chart patterns and setups.">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+
+  <!-- Favicon (inline SVG chart icon) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Lightweight Charts (self-hosted) -->
+  <script src="lib/lightweight-charts.standalone.production.js"></script>
+
+  <!-- App modules -->
+  <script src="js/store.js"></script>
+  <script src="js/stats-engine.js"></script>
+  <script src="js/sma.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/components/chart-manager.js"></script>
+  <script src="js/components/sidebar.js"></script>
+  <script src="js/components/card-grid.js"></script>
+  <script src="js/components/filters.js"></script>
+  <script src="js/components/index-charts.js"></script>
+  <script src="js/components/group-view.js"></script>
+  <script src="js/components/example-detail.js"></script>
+
+  <!-- App entry point (must be last) -->
+  <script src="js/app.js"></script>
+</body>
+</html>

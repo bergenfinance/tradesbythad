@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Stock Chart Studies</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Header -->
+    <header class="admin-header">
+      <h1>Stock Studies — Admin</h1>
+      <div style="display:flex;gap:var(--space-3);align-items:center">
+        <button class="btn btn-sm" id="connect-btn" title="Connect to GitHub or local folder for saving">Connect</button>
+        <a href="index.html" class="btn btn-ghost btn-sm">View Site</a>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="admin-tabs">
+      <button class="admin-tab active" data-panel="panel-examples">Examples</button>
+      <button class="admin-tab" data-panel="panel-groups">Groups</button>
+      <button class="admin-tab" data-panel="panel-data">Data Management</button>
+    </nav>
+
+    <!-- Content -->
+    <div class="admin-content">
+      <!-- Examples Panel -->
+      <div class="admin-panel active" id="panel-examples">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4)">
+          <h2>Examples</h2>
+          <button class="btn btn-primary btn-sm" id="new-example">+ New Example</button>
+        </div>
+        <div id="example-form-area" style="display:none"></div>
+        <div id="examples-list"></div>
+      </div>
+
+      <!-- Groups Panel -->
+      <div class="admin-panel" id="panel-groups">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4)">
+          <h2>Groups</h2>
+          <button class="btn btn-primary btn-sm" id="new-group">+ New Group</button>
+        </div>
+        <div id="group-form-area" style="display:none"></div>
+        <div id="groups-list"></div>
+      </div>
+
+      <!-- Data Management Panel -->
+      <div class="admin-panel" id="panel-data">
+        <h2 style="margin-bottom:var(--space-4)">Data Management</h2>
+
+        <div style="margin-bottom:var(--space-8)">
+          <h3 style="margin-bottom:var(--space-3)">Export</h3>
+          <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-3)">
+            Download JSON files to update your site's data. Place them in the <code>data/</code> folder.
+          </p>
+          <div style="display:flex;gap:var(--space-3);flex-wrap:wrap">
+            <button class="btn btn-sm" id="export-examples">Export examples.json</button>
+            <button class="btn btn-sm" id="export-groups">Export groups.json</button>
+            <button class="btn btn-sm" id="export-all">Export All Data</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom:var(--space-8)">
+          <h3 style="margin-bottom:var(--space-3)">Import</h3>
+          <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-3)">
+            Import JSON files to replace current data. This will overwrite existing data in the admin (not on disk until exported).
+          </p>
+          <div style="display:flex;gap:var(--space-3);flex-wrap:wrap">
+            <button class="btn btn-sm" id="import-examples">Import examples.json</button>
+            <button class="btn btn-sm" id="import-groups">Import groups.json</button>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="margin-bottom:var(--space-3)">Direct File Access</h3>
+          <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-3)">
+            In Chrome/Edge, you can connect to your project folder for direct file writes. Click "Connect Folder" in the header and select your project root. Saves will then write directly to <code>data/</code> without downloading.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin scripts -->
+  <script src="js/admin/data-export.js"></script>
+  <script src="js/admin/form-handler.js"></script>
+  <script src="js/admin/admin-app.js"></script>
+</body>
+</html>
