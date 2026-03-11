@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "memory-stocks",
+    "name": "Memory Stocks",
+    "description": "",
+    "etfSymbol": "SMH",
+    "color": "#3498db",
+    "sortOrder": 0
+  }
+]
