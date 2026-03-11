@@ -228,72 +228,104 @@ const AdminData = (() => {
     return true;
   }
 
-  // ---- OHLC Data Fetching ----
-  const CORS_PROXIES = [
-    url => 'https://corsproxy.io/?' + encodeURIComponent(url),
-    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-  ];
+  // ---- Polygon.io Config (persisted in localStorage) ----
+  const POLYGON_KEY = 'tradesbythad_polygon';
 
-  async function fetchWithCorsProxy(url) {
-    for (const makeProxy of CORS_PROXIES) {
-      try {
-        const res = await fetch(makeProxy(url));
-        if (res.ok) return await res.json();
-      } catch { /* try next proxy */ }
-    }
-    throw new Error('All CORS proxies failed');
+  function setPolygonApiKey(key) {
+    localStorage.setItem(POLYGON_KEY, key);
   }
 
-  async function fetchYahooOHLC(symbol, interval, rangeDays) {
-    const period2 = Math.floor(Date.now() / 1000);
-    const period1 = rangeDays === 'max' ? 0 : period2 - (rangeDays * 24 * 3600);
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}`;
+  function getPolygonApiKey() {
+    return localStorage.getItem(POLYGON_KEY) || null;
+  }
 
-    const json = await fetchWithCorsProxy(url);
-    if (json.chart?.error) throw new Error(json.chart.error.description || 'Yahoo API error');
-    const result = json.chart?.result?.[0];
-    if (!result?.timestamp) throw new Error('No data for ' + symbol);
+  function isPolygonConnected() {
+    return !!getPolygonApiKey();
+  }
 
-    const ts = result.timestamp;
-    const q = result.indicators.quote[0];
-    const ohlc = [];
-    for (let i = 0; i < ts.length; i++) {
-      if (q.open[i] == null) continue;
-      const d = new Date(ts[i] * 1000);
-      if (interval === '1d') {
-        ohlc.push({
-          time: d.toISOString().split('T')[0],
-          open: Math.round(q.open[i] * 100) / 100,
-          high: Math.round(q.high[i] * 100) / 100,
-          low: Math.round(q.low[i] * 100) / 100,
-          close: Math.round(q.close[i] * 100) / 100
-        });
-      } else {
-        ohlc.push({
-          time: Math.floor(d.getTime() / 1000),
-          open: Math.round(q.open[i] * 100) / 100,
-          high: Math.round(q.high[i] * 100) / 100,
-          low: Math.round(q.low[i] * 100) / 100,
-          close: Math.round(q.close[i] * 100) / 100
+  // ---- Polygon.io OHLC Fetching ----
+  async function polygonFetch(endpoint) {
+    const apiKey = getPolygonApiKey();
+    if (!apiKey) throw new Error('Polygon.io API key not set');
+    const url = `https://api.polygon.io${endpoint}${endpoint.includes('?') ? '&' : '?'}apiKey=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 429) throw new Error('Rate limited — wait 60s and try again');
+      throw new Error(err.error || err.message || `Polygon API error (${res.status})`);
+    }
+    return res.json();
+  }
+
+  async function fetchPolygonOHLC(symbol, multiplier, timespan, from, to) {
+    const allBars = [];
+    let nextUrl = null;
+    let endpoint = `/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=true&sort=asc&limit=50000`;
+
+    while (endpoint) {
+      const json = nextUrl
+        ? await (async () => { const r = await fetch(nextUrl + `&apiKey=${getPolygonApiKey()}`); return r.json(); })()
+        : await polygonFetch(endpoint);
+
+      if (json.results && json.results.length > 0) {
+        json.results.forEach(bar => {
+          const d = new Date(bar.t);
+          if (timespan === 'day') {
+            allBars.push({
+              time: d.toISOString().split('T')[0],
+              open: Math.round(bar.o * 100) / 100,
+              high: Math.round(bar.h * 100) / 100,
+              low: Math.round(bar.l * 100) / 100,
+              close: Math.round(bar.c * 100) / 100
+            });
+          } else {
+            allBars.push({
+              time: Math.floor(d.getTime() / 1000),
+              open: Math.round(bar.o * 100) / 100,
+              high: Math.round(bar.h * 100) / 100,
+              low: Math.round(bar.l * 100) / 100,
+              close: Math.round(bar.c * 100) / 100
+            });
+          }
         });
       }
+
+      nextUrl = json.next_url || null;
+      if (!nextUrl) break;
     }
-    return ohlc;
+
+    if (allBars.length === 0) throw new Error('No data returned for ' + symbol);
+    return allBars;
+  }
+
+  async function testPolygonConnection(apiKey) {
+    const res = await fetch(`https://api.polygon.io/v3/reference/tickers?ticker=SPY&limit=1&apiKey=${apiKey}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Invalid API key');
+    }
+    return true;
   }
 
   async function fetchAndSaveOHLC(symbol, onProgress) {
-    if (!isGitHubConnected()) throw new Error('GitHub not connected — cannot save OHLC data');
+    if (!isGitHubConnected()) throw new Error('GitHub not connected');
+    if (!isPolygonConnected()) throw new Error('Polygon.io API key not set');
 
-    // Daily — max history
+    const today = new Date().toISOString().split('T')[0];
+
+    // Daily — max history (from 1990)
     if (onProgress) onProgress(`Fetching ${symbol} daily data...`);
-    const daily = await fetchYahooOHLC(symbol, '1d', 'max');
+    const daily = await fetchPolygonOHLC(symbol, 1, 'day', '1990-01-01', today);
     if (onProgress) onProgress(`Saving ${symbol}.json (${daily.length} bars)...`);
     await writeFileToGitHub(`ohlc/${symbol}.json`, daily);
 
-    // 5-min — last 5 days
+    // 5-min — last 5 trading days
     try {
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 7); // 7 calendar days to cover 5 trading days
+      const fromDate = fiveDaysAgo.toISOString().split('T')[0];
       if (onProgress) onProgress(`Fetching ${symbol} intraday data...`);
-      const intraday = await fetchYahooOHLC(symbol, '5m', 5);
+      const intraday = await fetchPolygonOHLC(symbol, 5, 'minute', fromDate, today);
       if (onProgress) onProgress(`Saving ${symbol}-5min.json (${intraday.length} bars)...`);
       await writeFileToGitHub(`ohlc/${symbol}-5min.json`, intraday);
     } catch (e) {
@@ -303,11 +335,13 @@ const AdminData = (() => {
     return daily.length;
   }
 
-  // Also fetch ETF data for a new group
   async function fetchAndSaveETF(etfSymbol, onProgress) {
     if (!isGitHubConnected()) throw new Error('GitHub not connected');
+    if (!isPolygonConnected()) throw new Error('Polygon.io API key not set');
+
+    const today = new Date().toISOString().split('T')[0];
     if (onProgress) onProgress(`Fetching ${etfSymbol} ETF data...`);
-    const daily = await fetchYahooOHLC(etfSymbol, '1d', 'max');
+    const daily = await fetchPolygonOHLC(etfSymbol, 1, 'day', '1990-01-01', today);
     if (onProgress) onProgress(`Saving ${etfSymbol}.json (${daily.length} bars)...`);
     await writeFileToGitHub(`ohlc/${etfSymbol}.json`, daily);
     return daily.length;
@@ -336,6 +370,7 @@ const AdminData = (() => {
     connectFolder, writeToDisk, isFolderConnected, getDirName,
     connectGitHub, disconnectGitHub, isGitHubConnected, getGitHubRepoName,
     testGitHubConnection, writeToGitHub, persist,
+    setPolygonApiKey, getPolygonApiKey, isPolygonConnected, testPolygonConnection,
     fetchAndSaveOHLC, fetchAndSaveETF
   };
 })();

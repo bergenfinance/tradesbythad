@@ -102,6 +102,29 @@
           <div style="border-top:1px solid var(--border-secondary);margin:var(--space-4) 0;padding-top:var(--space-4)">
             <div class="admin-connect-option">
               <div>
+                <strong>Polygon.io</strong>
+                <p style="color:var(--text-secondary);font-size:var(--text-xs);margin-top:2px">
+                  Market data API for auto-fetching chart data when adding examples.
+                  ${AdminData.isPolygonConnected() ? '<br><span style="color:var(--accent-green)">API key saved</span>' : ''}
+                </p>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-3);margin-top:var(--space-3)">
+              <div class="form-group" style="margin:0">
+                <label style="font-size:var(--text-xs)">API Key <a href="https://polygon.io/dashboard/api-keys" target="_blank" style="color:var(--text-link)">(get one)</a></label>
+                <input class="input" id="polygon-key" type="password" placeholder="your-api-key" value="${AdminData.isPolygonConnected() ? '••••••••' : ''}">
+              </div>
+              <div style="display:flex;gap:var(--space-2)">
+                <button class="btn btn-primary btn-sm" id="polygon-connect-btn">${AdminData.isPolygonConnected() ? 'Update' : 'Save Key'}</button>
+                ${AdminData.isPolygonConnected() ? '<button class="btn btn-ghost btn-sm" id="polygon-disconnect-btn" style="color:var(--accent-red)">Remove</button>' : ''}
+              </div>
+              <div id="polygon-status" style="font-size:var(--text-xs);min-height:18px"></div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border-secondary);margin:var(--space-4) 0;padding-top:var(--space-4)">
+            <div class="admin-connect-option">
+              <div>
                 <strong>Local Folder</strong>
                 <p style="color:var(--text-secondary);font-size:var(--text-xs);margin-top:2px">
                   Write directly to your project's data/ folder. Chrome/Edge only.
@@ -161,6 +184,43 @@
         AdminData.disconnectGitHub();
         updateConnectStatus();
         showToast('GitHub disconnected');
+        modal.remove();
+      });
+    }
+
+    // Polygon.io connect
+    modal.querySelector('#polygon-connect-btn').addEventListener('click', async () => {
+      const keyInput = modal.querySelector('#polygon-key').value.trim();
+      const status = modal.querySelector('#polygon-status');
+
+      if (!keyInput) {
+        status.innerHTML = '<span style="color:var(--accent-red)">API key required</span>';
+        return;
+      }
+
+      const apiKey = keyInput === '••••••••' ? AdminData.getPolygonApiKey() : keyInput;
+      if (!apiKey) {
+        status.innerHTML = '<span style="color:var(--accent-red)">Enter your API key</span>';
+        return;
+      }
+
+      status.innerHTML = '<span style="color:var(--text-tertiary)">Testing connection...</span>';
+      try {
+        await AdminData.testPolygonConnection(apiKey);
+        AdminData.setPolygonApiKey(apiKey);
+        status.innerHTML = '<span style="color:var(--accent-green)">Connected!</span>';
+        showToast('Polygon.io connected — chart data will auto-fetch');
+      } catch (e) {
+        status.innerHTML = `<span style="color:var(--accent-red)">${e.message}</span>`;
+      }
+    });
+
+    // Polygon.io disconnect
+    const polygonDisconnectBtn = modal.querySelector('#polygon-disconnect-btn');
+    if (polygonDisconnectBtn) {
+      polygonDisconnectBtn.addEventListener('click', () => {
+        localStorage.removeItem('tradesbythad_polygon');
+        showToast('Polygon.io key removed');
         modal.remove();
       });
     }
@@ -257,7 +317,7 @@
       await autoPersist();
 
       // Auto-fetch OHLC data for new examples
-      if (isNew && AdminData.isGitHubConnected()) {
+      if (isNew && AdminData.isGitHubConnected() && AdminData.isPolygonConnected()) {
         fetchOHLCForSymbol(data.symbol);
       }
     });
@@ -340,7 +400,7 @@
       await autoPersist();
 
       // Auto-fetch ETF data for new groups
-      if (isNew && data.etfSymbol && AdminData.isGitHubConnected()) {
+      if (isNew && data.etfSymbol && AdminData.isGitHubConnected() && AdminData.isPolygonConnected()) {
         fetchOHLCForSymbol(data.etfSymbol, true);
       }
     });
