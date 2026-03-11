@@ -1,21 +1,5 @@
 [
   {
-    "id": "energy-breakouts",
-    "name": "Energy Breakouts",
-    "description": "Breakout patterns in energy sector stocks following consolidation or basing periods",
-    "etfSymbol": "XLE",
-    "color": "#e67e22",
-    "sortOrder": 1
-  },
-  {
-    "id": "tech-momentum",
-    "name": "Tech Momentum",
-    "description": "Momentum continuation patterns in technology sector leaders",
-    "etfSymbol": "XLK",
-    "color": "#3498db",
-    "sortOrder": 2
-  },
-  {
     "id": "biotech-reversals",
     "name": "Biotech Reversals",
     "description": "Reversal patterns off significant lows in biotech and pharmaceutical stocks",
