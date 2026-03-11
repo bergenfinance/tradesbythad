@@ -228,6 +228,91 @@ const AdminData = (() => {
     return true;
   }
 
+  // ---- OHLC Data Fetching ----
+  const CORS_PROXIES = [
+    url => 'https://corsproxy.io/?' + encodeURIComponent(url),
+    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  ];
+
+  async function fetchWithCorsProxy(url) {
+    for (const makeProxy of CORS_PROXIES) {
+      try {
+        const res = await fetch(makeProxy(url));
+        if (res.ok) return await res.json();
+      } catch { /* try next proxy */ }
+    }
+    throw new Error('All CORS proxies failed');
+  }
+
+  async function fetchYahooOHLC(symbol, interval, rangeDays) {
+    const period2 = Math.floor(Date.now() / 1000);
+    const period1 = rangeDays === 'max' ? 0 : period2 - (rangeDays * 24 * 3600);
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}`;
+
+    const json = await fetchWithCorsProxy(url);
+    if (json.chart?.error) throw new Error(json.chart.error.description || 'Yahoo API error');
+    const result = json.chart?.result?.[0];
+    if (!result?.timestamp) throw new Error('No data for ' + symbol);
+
+    const ts = result.timestamp;
+    const q = result.indicators.quote[0];
+    const ohlc = [];
+    for (let i = 0; i < ts.length; i++) {
+      if (q.open[i] == null) continue;
+      const d = new Date(ts[i] * 1000);
+      if (interval === '1d') {
+        ohlc.push({
+          time: d.toISOString().split('T')[0],
+          open: Math.round(q.open[i] * 100) / 100,
+          high: Math.round(q.high[i] * 100) / 100,
+          low: Math.round(q.low[i] * 100) / 100,
+          close: Math.round(q.close[i] * 100) / 100
+        });
+      } else {
+        ohlc.push({
+          time: Math.floor(d.getTime() / 1000),
+          open: Math.round(q.open[i] * 100) / 100,
+          high: Math.round(q.high[i] * 100) / 100,
+          low: Math.round(q.low[i] * 100) / 100,
+          close: Math.round(q.close[i] * 100) / 100
+        });
+      }
+    }
+    return ohlc;
+  }
+
+  async function fetchAndSaveOHLC(symbol, onProgress) {
+    if (!isGitHubConnected()) throw new Error('GitHub not connected — cannot save OHLC data');
+
+    // Daily — max history
+    if (onProgress) onProgress(`Fetching ${symbol} daily data...`);
+    const daily = await fetchYahooOHLC(symbol, '1d', 'max');
+    if (onProgress) onProgress(`Saving ${symbol}.json (${daily.length} bars)...`);
+    await writeFileToGitHub(`ohlc/${symbol}.json`, daily);
+
+    // 5-min — last 5 days
+    try {
+      if (onProgress) onProgress(`Fetching ${symbol} intraday data...`);
+      const intraday = await fetchYahooOHLC(symbol, '5m', 5);
+      if (onProgress) onProgress(`Saving ${symbol}-5min.json (${intraday.length} bars)...`);
+      await writeFileToGitHub(`ohlc/${symbol}-5min.json`, intraday);
+    } catch (e) {
+      console.warn('5-min data not available for ' + symbol + ':', e.message);
+    }
+
+    return daily.length;
+  }
+
+  // Also fetch ETF data for a new group
+  async function fetchAndSaveETF(etfSymbol, onProgress) {
+    if (!isGitHubConnected()) throw new Error('GitHub not connected');
+    if (onProgress) onProgress(`Fetching ${etfSymbol} ETF data...`);
+    const daily = await fetchYahooOHLC(etfSymbol, '1d', 'max');
+    if (onProgress) onProgress(`Saving ${etfSymbol}.json (${daily.length} bars)...`);
+    await writeFileToGitHub(`ohlc/${etfSymbol}.json`, daily);
+    return daily.length;
+  }
+
   // Unified save — picks the right backend
   async function persist() {
     if (isGitHubConnected()) {
@@ -250,6 +335,7 @@ const AdminData = (() => {
     importFile, setExamples, setGroups,
     connectFolder, writeToDisk, isFolderConnected, getDirName,
     connectGitHub, disconnectGitHub, isGitHubConnected, getGitHubRepoName,
-    testGitHubConnection, writeToGitHub, persist
+    testGitHubConnection, writeToGitHub, persist,
+    fetchAndSaveOHLC, fetchAndSaveETF
   };
 })();

@@ -57,6 +57,16 @@ const GroupView = (() => {
     chart.setData(data);
     chart.addSMAs(data);
 
+    // Default to last ~2 years
+    if (data.length > 0) {
+      try {
+        const last = data[data.length - 1].time;
+        const from = new Date(last + 'T00:00:00');
+        from.setFullYear(from.getFullYear() - 2);
+        chart.setVisibleRange(from.toISOString().split('T')[0], last);
+      } catch { chart.fitContent(); }
+    }
+
     const markers = Store.getMarkers({ groupId });
     chart.setMarkers(markers);
 

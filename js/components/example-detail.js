@@ -58,54 +58,85 @@ const ExampleDetail = (() => {
     `;
     detail.appendChild(meta);
 
-    // Trade Stats Panel
-    if (StatsEngine.hasTradeData(example)) {
-      const stats = StatsEngine.computeTradeStats(example);
+    // Trade Stats Panel — always show available data
+    {
+      const panel = document.createElement('div');
+      panel.className = 'trade-stats-panel';
+      const dirLabel = (example.direction || 'long').charAt(0).toUpperCase() + (example.direction || 'long').slice(1);
+      const holdDays = StatsEngine.hasTradeData(example) ? StatsEngine.computeTradeStats(example)?.holdDays : null;
+      const holdDaysFallback = (example.startDate && example.endDate)
+        ? (() => { const s = new Date(example.startDate + 'T00:00:00'); const e = new Date(example.endDate + 'T00:00:00'); let c = 0; const cur = new Date(s); while (cur <= e) { const d = cur.getDay(); if (d !== 0 && d !== 6) c++; cur.setDate(cur.getDate() + 1); } return c; })()
+        : null;
+
+      let statsHtml = '';
+      const stats = StatsEngine.hasTradeData(example) ? StatsEngine.computeTradeStats(example) : null;
+
       if (stats) {
-        const panel = document.createElement('div');
-        panel.className = 'trade-stats-panel';
         const pctClass = stats.pctGainLoss >= 0 ? 'stat-positive' : 'stat-negative';
         const rClass = stats.rMultiple != null ? (stats.rMultiple >= 0 ? 'stat-positive' : 'stat-negative') : '';
-        const dirLabel = (example.direction || 'long').charAt(0).toUpperCase() + (example.direction || 'long').slice(1);
-        panel.innerHTML = `
-          <h3>Trade Data</h3>
-          <div class="trade-stats-grid">
-            <div class="stat-cell">
-              <span class="stat-label">Direction</span>
-              <span class="stat-value">${dirLabel}</span>
-            </div>
-            <div class="stat-cell">
-              <span class="stat-label">Entry</span>
-              <span class="stat-value">$${example.entryPrice.toFixed(2)}</span>
-            </div>
-            <div class="stat-cell">
-              <span class="stat-label">Exit</span>
-              <span class="stat-value">$${example.exitPrice.toFixed(2)}</span>
-            </div>
-            <div class="stat-cell">
-              <span class="stat-label">Stop</span>
-              <span class="stat-value">$${example.stopLoss.toFixed(2)}</span>
-            </div>
-            <div class="stat-cell">
-              <span class="stat-label">Return</span>
-              <span class="stat-value ${pctClass}">${stats.pctGainLoss >= 0 ? '+' : ''}${stats.pctGainLoss.toFixed(2)}%</span>
-            </div>
-            <div class="stat-cell">
-              <span class="stat-label">R-Multiple</span>
-              <span class="stat-value ${rClass}">${stats.rMultiple != null ? stats.rMultiple.toFixed(2) + 'R' : '—'}</span>
-            </div>
-            <div class="stat-cell">
-              <span class="stat-label">Risk</span>
-              <span class="stat-value">${stats.riskPct.toFixed(2)}%</span>
-            </div>
-            <div class="stat-cell">
-              <span class="stat-label">Hold Time</span>
-              <span class="stat-value">${stats.holdDays != null ? stats.holdDays + ' days' : '—'}</span>
-            </div>
+        statsHtml = `
+          <div class="stat-cell">
+            <span class="stat-label">Direction</span>
+            <span class="stat-value">${dirLabel}</span>
           </div>
-        `;
-        detail.appendChild(panel);
+          <div class="stat-cell">
+            <span class="stat-label">Entry</span>
+            <span class="stat-value">$${example.entryPrice.toFixed(2)}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Exit</span>
+            <span class="stat-value">$${example.exitPrice.toFixed(2)}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Stop</span>
+            <span class="stat-value">$${example.stopLoss.toFixed(2)}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Return</span>
+            <span class="stat-value ${pctClass}">${stats.pctGainLoss >= 0 ? '+' : ''}${stats.pctGainLoss.toFixed(2)}%</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">R-Multiple</span>
+            <span class="stat-value ${rClass}">${stats.rMultiple != null ? stats.rMultiple.toFixed(2) + 'R' : '—'}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Risk</span>
+            <span class="stat-value">${stats.riskPct.toFixed(2)}%</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Hold Time</span>
+            <span class="stat-value">${stats.holdDays != null ? stats.holdDays + ' days' : '—'}</span>
+          </div>`;
+      } else {
+        // Show what we have even without full trade data
+        statsHtml = `
+          <div class="stat-cell">
+            <span class="stat-label">Direction</span>
+            <span class="stat-value">${dirLabel}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Entry</span>
+            <span class="stat-value">${example.entryPrice != null ? '$' + example.entryPrice.toFixed(2) : '—'}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Exit</span>
+            <span class="stat-value">${example.exitPrice != null ? '$' + example.exitPrice.toFixed(2) : '—'}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Stop</span>
+            <span class="stat-value">${example.stopLoss != null ? '$' + example.stopLoss.toFixed(2) : '—'}</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-label">Hold Time</span>
+            <span class="stat-value">${holdDaysFallback != null ? holdDaysFallback + ' days' : '—'}</span>
+          </div>`;
       }
+
+      panel.innerHTML = `
+        <h3>Trade Data</h3>
+        <div class="trade-stats-grid">${statsHtml}</div>
+      `;
+      detail.appendChild(panel);
     }
 
     // Fundamentals Panel
@@ -294,11 +325,35 @@ const ExampleDetail = (() => {
       exampleChart.addPriceLines(lines);
     }
 
+    // Add start/end date markers on the chart
+    const markers = [];
+    if (example.startDate) {
+      const group = Store.getGroup(example.groupId);
+      markers.push({
+        time: is5min ? Math.floor(new Date(example.startDate).getTime() / 1000) : example.startDate,
+        position: 'belowBar',
+        color: group?.color || '#58a6ff',
+        shape: 'arrowUp',
+        text: 'Start'
+      });
+    }
+    if (example.endDate) {
+      markers.push({
+        time: is5min ? Math.floor(new Date(example.endDate).getTime() / 1000) : example.endDate,
+        position: 'aboveBar',
+        color: '#e6edf3',
+        shape: 'arrowDown',
+        text: 'End'
+      });
+    }
+    if (markers.length > 0) {
+      exampleChart.setMarkers(markers);
+    }
+
     // Set visible range around the trade period
     try {
       const padDays = is5min ? 3 : 30;
       if (is5min) {
-        // Unix seconds range
         const startMs = new Date(example.startDate).getTime();
         const endMs = new Date(example.endDate).getTime();
         const padMs = padDays * 24 * 60 * 60;
@@ -306,7 +361,6 @@ const ExampleDetail = (() => {
         const toTime = Math.floor(endMs / 1000) + padMs;
         exampleChart.setVisibleRange(fromTime, toTime);
       } else {
-        // String dates
         const start = new Date(example.startDate);
         const end = new Date(example.endDate);
         start.setDate(start.getDate() - padDays);
@@ -316,7 +370,6 @@ const ExampleDetail = (() => {
         exampleChart.setVisibleRange(from, to);
       }
     } catch (e) {
-      // Fallback: fit all content
       exampleChart.fitContent();
     }
   }

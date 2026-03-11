@@ -253,7 +253,7 @@ body {
 }
 
 .chart-wrapper {
-  height: 300px;
+  height: 500px;
   position: relative;
 }
 
@@ -263,7 +263,7 @@ body {
 }
 
 .chart-single .chart-wrapper {
-  height: 400px;
+  height: 550px;
 }
 
 /* ---- Card Grid ---- */

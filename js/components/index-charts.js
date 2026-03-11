@@ -145,6 +145,16 @@ const IndexCharts = (() => {
     chart.addSMAs(data);
     chart.setMarkers(currentMarkers || Store.getMarkers());
 
+    // Default to last ~2 years instead of fitting all history
+    if (data.length > 0) {
+      try {
+        const last = data[data.length - 1].time;
+        const from = new Date(last + 'T00:00:00');
+        from.setFullYear(from.getFullYear() - 2);
+        chart.setVisibleRange(from.toISOString().split('T')[0], last);
+      } catch { chart.fitContent(); }
+    }
+
     chart.onClick((param) => {
       if (param.time) {
         const timeStr = typeof param.time === 'string' ? param.time :

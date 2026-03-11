@@ -249,11 +249,17 @@
     const handle = FormHandler.renderExampleForm(exFormArea, example, AdminData.getGroups());
 
     handle.onSave(async (data) => {
+      const isNew = !example;
       AdminData.saveExample(data);
       hideExampleForm();
       renderExamplesList();
       showToast(example ? 'Example updated' : 'Example created');
       await autoPersist();
+
+      // Auto-fetch OHLC data for new examples
+      if (isNew && AdminData.isGitHubConnected()) {
+        fetchOHLCForSymbol(data.symbol);
+      }
     });
 
     handle.onCancel(() => hideExampleForm());
@@ -326,11 +332,17 @@
     const handle = FormHandler.renderGroupForm(grFormArea, group);
 
     handle.onSave(async (data) => {
+      const isNew = !group;
       AdminData.saveGroup(data);
       hideGroupForm();
       renderGroupsList();
       showToast(group ? 'Group updated' : 'Group created');
       await autoPersist();
+
+      // Auto-fetch ETF data for new groups
+      if (isNew && data.etfSymbol && AdminData.isGitHubConnected()) {
+        fetchOHLCForSymbol(data.etfSymbol, true);
+      }
     });
 
     handle.onCancel(() => hideGroupForm());
@@ -388,6 +400,21 @@
     } catch (e) {
       console.error('Auto-persist failed:', e);
       showToast('Save failed: ' + e.message, 'error');
+    }
+  }
+
+  // ---- OHLC Auto-Fetch ----
+  async function fetchOHLCForSymbol(symbol, isETF) {
+    showToast(`Fetching chart data for ${symbol}...`, 'info');
+    try {
+      const fn = isETF ? AdminData.fetchAndSaveETF : AdminData.fetchAndSaveOHLC;
+      const bars = await fn(symbol, (msg) => {
+        console.log(msg);
+      });
+      showToast(`${symbol} chart data saved (${bars} bars)`, 'success');
+    } catch (e) {
+      console.error('OHLC fetch failed:', e);
+      showToast(`Chart data fetch failed for ${symbol}: ${e.message}`, 'error');
     }
   }
 
