@@ -10,7 +10,21 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
 </head>
 <body>
-  <div class="admin-layout">
+
+  <!-- Password Gate -->
+  <div id="auth-gate" class="auth-gate">
+    <div class="auth-box">
+      <h2>Admin Access</h2>
+      <form id="auth-form">
+        <input class="input" type="password" id="auth-password" placeholder="Password" autofocus>
+        <button class="btn btn-primary" type="submit" style="width:100%;margin-top:var(--space-3)">Unlock</button>
+      </form>
+      <p id="auth-error" style="color:var(--accent-red);font-size:var(--text-xs);margin-top:var(--space-2);display:none">Incorrect password</p>
+    </div>
+  </div>
+
+  <!-- Admin (hidden until authenticated) -->
+  <div class="admin-layout" id="admin-main" style="display:none">
     <!-- Header -->
     <header class="admin-header">
       <h1>Stock Studies — Admin</h1>
@@ -79,16 +93,52 @@
         <div>
           <h3 style="margin-bottom:var(--space-3)">Direct File Access</h3>
           <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-3)">
-            In Chrome/Edge, you can connect to your project folder for direct file writes. Click "Connect Folder" in the header and select your project root. Saves will then write directly to <code>data/</code> without downloading.
+            Connect to GitHub to save directly from any computer, or use a local folder in Chrome/Edge.
           </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Admin scripts -->
-  <script src="js/admin/data-export.js"></script>
-  <script src="js/admin/form-handler.js"></script>
-  <script src="js/admin/admin-app.js"></script>
+  <!-- Auth script (runs before admin scripts) -->
+  <script>
+    const HASH = '33f16ba3bab35d9573d77c78669123377e778f29349dfaaa249b2da325db55fd';
+
+    async function sha256(text) {
+      const data = new TextEncoder().encode(text);
+      const buf = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function unlock() {
+      document.getElementById('auth-gate').style.display = 'none';
+      document.getElementById('admin-main').style.display = '';
+      // Load admin scripts dynamically after auth
+      ['js/admin/data-export.js', 'js/admin/form-handler.js', 'js/admin/admin-app.js'].forEach(src => {
+        const s = document.createElement('script');
+        s.src = src;
+        document.body.appendChild(s);
+      });
+    }
+
+    // Check session
+    if (sessionStorage.getItem('admin_auth') === 'ok') {
+      unlock();
+    }
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pw = document.getElementById('auth-password').value;
+      const hash = await sha256(pw);
+      if (hash === HASH) {
+        sessionStorage.setItem('admin_auth', 'ok');
+        unlock();
+      } else {
+        document.getElementById('auth-error').style.display = 'block';
+        document.getElementById('auth-password').value = '';
+        document.getElementById('auth-password').focus();
+      }
+    });
+  </script>
 </body>
 </html>
