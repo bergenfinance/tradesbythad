@@ -113,12 +113,16 @@
     function unlock() {
       document.getElementById('auth-gate').style.display = 'none';
       document.getElementById('admin-main').style.display = '';
-      // Load admin scripts dynamically after auth
-      ['js/admin/data-export.js', 'js/admin/form-handler.js', 'js/admin/admin-app.js'].forEach(src => {
+      // Load admin scripts sequentially (each depends on the previous)
+      const scripts = ['js/admin/data-export.js', 'js/admin/form-handler.js', 'js/admin/admin-app.js'];
+      function loadNext(i) {
+        if (i >= scripts.length) return;
         const s = document.createElement('script');
-        s.src = src;
+        s.src = scripts[i];
+        s.onload = () => loadNext(i + 1);
         document.body.appendChild(s);
-      });
+      }
+      loadNext(0);
     }
 
     // Check session

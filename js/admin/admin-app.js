@@ -2,7 +2,7 @@
  * Admin App — Main controller. Self-initializes on DOMContentLoaded.
  * Depends on: AdminData, FormHandler
  */
-document.addEventListener('DOMContentLoaded', async () => {
+(async () => {
 
   // ---- Init data ----
   try {
@@ -410,4 +410,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- Initial render ----
   renderExamplesList();
   renderGroupsList();
-});
+})();
